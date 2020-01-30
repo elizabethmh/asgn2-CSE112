@@ -10,9 +10,13 @@ let want_dump = ref false
 
 let rec eval_expr (expr : Absyn.expr) : float = match expr with
     | Number number -> number
-    | Memref memref -> no_expr "eval_expr Memref"
-    | Unary (oper, expr) -> no_expr "eval_expr Unary"
-    | Binary (oper, expr1, expr2) -> no_expr "eval_expr Binary"
+    | Memref memref -> no_expr "eval_expr Memref" 
+    | Unary (oper, expr) -> let value = eval_expr expr
+      in Hashtbl.find Tables.unary_fn_table oper value
+    | Binary (oper, expr1, expr2) -> let op = Hashtbl.find Tables.binary_fn_table oper
+      and left = eval_expr expr1
+      and right = eval_expr expr2
+      in (op left right)
 
 let rec interpret (program : Absyn.program) = match program with
     | [] -> ()
@@ -23,7 +27,7 @@ let rec interpret (program : Absyn.program) = match program with
 and interp_stmt (stmt : Absyn.stmt) (continuation : Absyn.program) =
     match stmt with
     | Dim (ident, expr) -> no_stmt "Dim (ident, expr)" continuation
-    | Let (memref, expr) -> no_stmt "Let (memref, expr)" continuation
+    | Let (memref, expr) -> interp_let memref expr continuation
     | Goto label -> no_stmt "Goto label" continuation
     | If (expr, label) -> no_stmt "If (expr, label)" continuation
     | Print print_list -> interp_print print_list continuation
@@ -40,7 +44,21 @@ and interp_print (print_list : Absyn.printable list)
          | Printexpr expr ->
            print_float (eval_expr expr))
     in (List.iter print_item print_list; print_newline ());
-    interpret continuation
+    interpret continuation                      
+
+and interp_let (memref : Absyn.memref)
+               (expr :  Absyn.expr)
+               (continuation : Absyn.program) =
+     match memref with
+     | Arrayref (ident, indexExpr) -> 
+       let indexVal = (int_of_float (eval_expr indexExpr))
+       and arrayVal = Hashtbl.find Tables.array_table ident 
+       and evalExpress = eval_expr expr
+       in Array.set arrayVal indexVal evalExpress
+     | Variable var -> 
+       let evalExpr = eval_expr expr
+       in Hashtbl.add Tables.variable_table var evalExpr;
+     interpret continuation
 
 and interp_input (memref_list : Absyn.memref list)
                  (continuation : Absyn.program)  =
