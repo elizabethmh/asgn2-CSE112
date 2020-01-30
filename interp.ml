@@ -10,7 +10,11 @@ let want_dump = ref false
 
 let rec eval_expr (expr : Absyn.expr) : float = match expr with
     | Number number -> number
-    | Memref memref -> no_expr "eval_expr Memref" 
+    | Memref memref -> (match memref with 
+      | Arrayref (ident, expr) -> let indexVal = (int_of_float (eval_expr expr))
+       and arrayVal = Hashtbl.find Tables.array_table ident 
+       in Array.get arrayVal indexVal
+      | Variable (ident) -> Hashtbl.find Tables.variable_table ident)
     | Unary (oper, expr) -> let value = eval_expr expr
       in Hashtbl.find Tables.unary_fn_table oper value
     | Binary (oper, expr1, expr2) -> let op = Hashtbl.find Tables.binary_fn_table oper
