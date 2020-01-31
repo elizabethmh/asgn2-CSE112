@@ -22,6 +22,13 @@ let rec eval_expr (expr : Absyn.expr) : float = match expr with
       and right = eval_expr expr2
       in (op left right)
 
+let rec eval_relop (expr : Absyn.expr) : bool = match expr with
+     | Binary (oper, expr1, expr2) -> let op = Hashtbl.find Tables.bool_fn_table oper
+     and left = eval_expr expr1
+     and right = eval_expr expr2
+     in (op left right)
+     | _ -> false
+
 let rec interpret (program : Absyn.program) = match program with
     | [] -> ()
     | firstline::continuation -> match firstline with
@@ -33,7 +40,7 @@ and interp_stmt (stmt : Absyn.stmt) (continuation : Absyn.program) =
     | Dim (ident, expr) -> interp_dim ident expr continuation
     | Let (memref, expr) -> interp_let memref expr continuation
     | Goto label -> interp_goto label continuation
-    | If (expr, label) -> no_stmt "If (expr, label)" continuation
+    | If (expr, label) -> interp_if expr label continuation
     | Print print_list -> interp_print print_list continuation
     | Input memref_list -> interp_input memref_list continuation
 
@@ -75,6 +82,10 @@ and interp_goto (label : Absyn.label)
      (continuation : Absyn.program) =
      interpret (Hashtbl.find Tables.label_table label)
 
+and interp_if (expr :  Absyn.expr)
+               (label :  Absyn.label)
+               (continuation : Absyn.program) = 
+     if (eval_relop expr) then interpret (Hashtbl.find Tables.label_table label) else interpret continuation
 
 and interp_input (memref_list : Absyn.memref list)
                  (continuation : Absyn.program)  =
