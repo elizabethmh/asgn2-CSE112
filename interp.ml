@@ -30,9 +30,9 @@ let rec interpret (program : Absyn.program) = match program with
 
 and interp_stmt (stmt : Absyn.stmt) (continuation : Absyn.program) =
     match stmt with
-    | Dim (ident, expr) -> no_stmt "Dim (ident, expr)" continuation
+    | Dim (ident, expr) -> interp_dim ident expr continuation
     | Let (memref, expr) -> interp_let memref expr continuation
-    | Goto label -> no_stmt "Goto label" continuation
+    | Goto label -> interp_goto label continuation
     | If (expr, label) -> no_stmt "If (expr, label)" continuation
     | Print print_list -> interp_print print_list continuation
     | Input memref_list -> interp_input memref_list continuation
@@ -58,11 +58,23 @@ and interp_let (memref : Absyn.memref)
        let indexVal = (int_of_float (eval_expr indexExpr))
        and arrayVal = Hashtbl.find Tables.array_table ident 
        and evalExpress = eval_expr expr
-       in Array.set arrayVal indexVal evalExpress
+       in Array.set arrayVal indexVal evalExpress;
+       interpret continuation
      | Variable var -> 
        let evalExpr = eval_expr expr
        in Hashtbl.add Tables.variable_table var evalExpr;
+       interpret continuation
+
+and interp_dim (ident : Absyn.ident)
+               (expr :  Absyn.expr)
+               (continuation : Absyn.program) =
+     Hashtbl.replace Tables.array_table ident (Array.make (int_of_float(eval_expr expr)) 0.0);
      interpret continuation
+
+and interp_goto (label : Absyn.label)
+     (continuation : Absyn.program) =
+     interpret (Hashtbl.find Tables.label_table label)
+
 
 and interp_input (memref_list : Absyn.memref list)
                  (continuation : Absyn.program)  =
