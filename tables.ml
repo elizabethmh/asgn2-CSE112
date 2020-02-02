@@ -52,7 +52,7 @@ let bool_fn_table : boolean_fn_table_t = Hashtbl.create 16
 let _ = List.iter (fun (label, value) ->
                 Hashtbl.add bool_fn_table label value)
                 ["=", (=);
-                "<>", (<>);
+                "!=", (<>);
                 "<", (<);
                 ">", (>);
                 "<=", (<=);

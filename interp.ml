@@ -69,7 +69,7 @@ and interp_let (memref : Absyn.memref)
        interpret continuation
      | Variable var -> 
        let evalExpr = eval_expr expr
-       in Hashtbl.add Tables.variable_table var evalExpr;
+       in Hashtbl.replace Tables.variable_table var evalExpr;
        interpret continuation
 
 and interp_dim (ident : Absyn.ident)
@@ -87,13 +87,33 @@ and interp_if (expr :  Absyn.expr)
                (continuation : Absyn.program) = 
      if (eval_relop expr) then interpret (Hashtbl.find Tables.label_table label) else interpret continuation
 
+and interp_addNumberToTable (memref : Absyn.memref)
+                            (num :  Absyn.number)
+                            (continuation : Absyn.program) =
+     match memref with
+     | Arrayref (ident, indexExpr) -> 
+          let arrayVal = Hashtbl.find Tables.array_table ident 
+          in Array.set arrayVal (int_of_float(eval_expr indexExpr)) num;
+          interpret continuation
+     | Variable var -> 
+          Hashtbl.add Tables.variable_table var num;
+          interpret continuation
+
 and interp_input (memref_list : Absyn.memref list)
                  (continuation : Absyn.program)  =
     let input_number memref =
         try  let number = Etc.read_number ()
-             in (print_float number; print_newline ())
+             in ((match memref with
+             | Arrayref (ident, indexExpr) -> 
+                  let arrayVal = Hashtbl.find Tables.array_table ident 
+                  in Array.set arrayVal (int_of_float(eval_expr indexExpr)) number;
+             | Variable var -> 
+                  Hashtbl.add Tables.variable_table var number;
+             );
+             print_newline ())
         with End_of_file -> 
-             (print_string "End_of_file"; print_newline ())
+             ( Hashtbl.replace Tables.variable_table "eof" 1.0;
+               print_newline ())
     in List.iter input_number memref_list;
     interpret continuation
 
